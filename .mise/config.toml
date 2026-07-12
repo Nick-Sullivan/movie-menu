@@ -1,0 +1,57 @@
+[tools]
+node      = "24.16.0"
+terraform = "1.15.5"
+rust      = "1.96.0"
+
+[tasks."client:build"]
+description = "Build the client for production"
+dir         = "client"
+run         = "npm run build"
+
+[tasks."client:dev"]
+description = "Run the client dev server"
+dir         = "client"
+run         = "npm run dev"
+
+[tasks."client:dev:cloud"]
+description = "Run the client dev server pointed at the live Lambda"
+dir         = "client"
+run         = "VITE_API_URL=$(terraform -chdir=../terraform/upload output -raw worker_url) npm run dev"
+
+[tasks."client:test"]
+description = "Run Playwright tests (auto-starts Vite dev server)"
+dir         = "client"
+run         = "npm test"
+
+[tasks."client:test:update"]
+description = "Regenerate Playwright screenshot baselines"
+dir         = "client"
+run         = "npm run test:update"
+
+[tasks.dev]
+description = "Run the server and client dev servers concurrently"
+depends     = ["server:dev", "client:dev"]
+
+[tasks.init]
+description = "Install client dependencies and Playwright browser"
+run         = ["npm install --prefix client", "node client/node_modules/@playwright/test/cli.js install chromium"]
+
+[tasks."server:build"]
+description = "Build the server for production"
+dir         = "server"
+run         = "cargo build --release"
+
+[tasks."server:dev"]
+description = "Run the server in development mode"
+dir         = "server"
+run         = "cargo run"
+
+[tasks."server:dev:cloud"]
+description = "Run the server locally pointed at the production DynamoDB table"
+dir         = "server"
+run         = "STORE=dynamodb DYNAMODB_TABLE=tasting-shrek-menus cargo run"
+
+[tasks."server:test"]
+description = "Run server integration tests"
+dir         = "server"
+run         = "cargo test"

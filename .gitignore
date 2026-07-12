@@ -1,0 +1,26 @@
+# Claude Code local settings
+.claude/settings.json
+
+# Client
+client/node_modules
+client/dist
+client/*.local
+client/test-results
+client/playwright-report
+
+# Server (Rust)
+server/target
+
+# Terraform — local provider caches and state. State files can contain
+# secrets and resource internals; the remote backend is the source of truth.
+# (.terraform.lock.hcl is deliberately NOT ignored — commit it.)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+
+# OS noise
+.DS_Store
