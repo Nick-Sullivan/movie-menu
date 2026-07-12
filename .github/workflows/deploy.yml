@@ -26,11 +26,34 @@ jobs:
 
       - name: Setup terraform
         uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
 
-      - name: Initialise terraform state
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          install_args: node
+
+      - name: Initialise terraform state (infra)
+        working-directory: terraform/infrastructure
+        run: terraform init
+
+      - name: Apply terraform state (infra)
+        working-directory: terraform/infrastructure
+        run: terraform apply -auto-approve
+
+      - name: Initialise terraform state (upload)
         working-directory: terraform/upload
         run: terraform init
 
-      - name: Apply terraform state
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build client
+        working-directory: client
+        run: VITE_API_URL=$(terraform -chdir=../terraform/upload output -raw worker_url) npm run build
+
+      - name: Apply terraform state (upload)
         working-directory: terraform/upload
         run: terraform apply -auto-approve
