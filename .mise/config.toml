@@ -8,6 +8,16 @@ description = "Build the client for production"
 dir         = "client"
 run         = "npm run build"
 
+[tasks."client:install"]
+description = "Install client dependencies from the lockfile"
+dir         = "client"
+run         = "npm ci"
+
+[tasks."client:install:browser"]
+description = "Install Playwright's bundled Chromium (CI; WSL uses the system one)"
+dir         = "client"
+run         = "node ./node_modules/@playwright/test/cli.js install --with-deps chromium"
+
 [tasks."client:dev"]
 description = "Run the client dev server"
 dir         = "client"
@@ -22,6 +32,11 @@ run         = "VITE_API_URL=$(terraform -chdir=../terraform/upload output -raw w
 description = "Run Playwright tests (auto-starts Vite dev server)"
 dir         = "client"
 run         = "npm test"
+
+[tasks."client:test:ci"]
+description = "Run Playwright tests without screenshot comparisons (baselines are WSL-rendered)"
+dir         = "client"
+run         = "npm run test:ci"
 
 [tasks."client:test:update"]
 description = "Regenerate Playwright screenshot baselines"

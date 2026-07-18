@@ -43,8 +43,8 @@ export interface Menu {
 // Blank local menu for the create flow; saved to the server on first start.
 export function newLocalMenu(): Menu {
   return {
-    id: '',
-    name: '',
+    id: "",
+    name: "",
     duration_secs: 7200,
     schedule: [],
     started_at: null,

@@ -8,8 +8,8 @@ use aws_sdk_dynamodb::operation::put_item::PutItemError;
 use aws_sdk_dynamodb::operation::update_item::UpdateItemError;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 
-use crate::models::{Menu, ScheduleEntry, ViewerSettings};
 use super::{MenuStore, StoreError};
+use crate::models::{Menu, ScheduleEntry, ViewerSettings};
 
 pub struct DynamoDbStore {
     client: aws_sdk_dynamodb::Client,
@@ -33,15 +33,18 @@ fn expires_at() -> Result<u64, StoreError> {
 }
 
 fn menu_to_item(menu: &Menu) -> Result<HashMap<String, AttributeValue>, StoreError> {
-    let schedule_json = serde_json::to_string(&menu.schedule)
-        .map_err(|e| StoreError::Internal(e.to_string()))?;
-    let viewer_json = serde_json::to_string(&menu.viewer)
-        .map_err(|e| StoreError::Internal(e.to_string()))?;
+    let schedule_json =
+        serde_json::to_string(&menu.schedule).map_err(|e| StoreError::Internal(e.to_string()))?;
+    let viewer_json =
+        serde_json::to_string(&menu.viewer).map_err(|e| StoreError::Internal(e.to_string()))?;
 
     let mut item = HashMap::from([
         ("id".to_string(), AttributeValue::S(menu.id.clone())),
         ("name".to_string(), AttributeValue::S(menu.name.clone())),
-        ("duration_secs".to_string(), AttributeValue::N(menu.duration_secs.to_string())),
+        (
+            "duration_secs".to_string(),
+            AttributeValue::N(menu.duration_secs.to_string()),
+        ),
         ("schedule".to_string(), AttributeValue::S(schedule_json)),
         ("viewer".to_string(), AttributeValue::S(viewer_json)),
     ]);
@@ -70,13 +73,20 @@ fn item_to_menu(item: &HashMap<String, AttributeValue>) -> Result<Menu, StoreErr
         .and_then(|s| serde_json::from_str(s).ok())
         .unwrap_or_default();
 
-    Ok(Menu { id, name, duration_secs, schedule, started_at, viewer })
+    Ok(Menu {
+        id,
+        name,
+        duration_secs,
+        schedule,
+        started_at,
+        viewer,
+    })
 }
 
 fn get_s(item: &HashMap<String, AttributeValue>, key: &str) -> Result<String, StoreError> {
     item.get(key)
         .and_then(|v| v.as_s().ok())
-        .map(|s| s.clone())
+        .cloned()
         .ok_or_else(|| StoreError::Internal(format!("missing or invalid attribute: {key}")))
 }
 
@@ -108,7 +118,10 @@ impl MenuStore for DynamoDbStore {
     ) -> Pin<Box<dyn Future<Output = Result<Menu, StoreError>> + Send + 'a>> {
         Box::pin(async move {
             let mut item = menu_to_item(&menu)?;
-            item.insert("expires_at".to_string(), AttributeValue::N(expires_at()?.to_string()));
+            item.insert(
+                "expires_at".to_string(),
+                AttributeValue::N(expires_at()?.to_string()),
+            );
 
             self.client
                 .put_item()
@@ -136,7 +149,8 @@ impl MenuStore for DynamoDbStore {
             // Opening a menu extends its life: refresh the TTL and read the
             // item in one atomic call (the condition stops the "update" from
             // creating a phantom item for an unknown id).
-            let result = self.client
+            let result = self
+                .client
                 .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))
@@ -169,7 +183,10 @@ impl MenuStore for DynamoDbStore {
             // Full replace, so expires_at must be re-set or the edited menu
             // would lose its TTL and live forever.
             let mut item = menu_to_item(&menu)?;
-            item.insert("expires_at".to_string(), AttributeValue::N(expires_at()?.to_string()));
+            item.insert(
+                "expires_at".to_string(),
+                AttributeValue::N(expires_at()?.to_string()),
+            );
             self.client
                 .put_item()
                 .table_name(&self.table_name)
@@ -200,11 +217,14 @@ impl MenuStore for DynamoDbStore {
                 .as_secs();
             let ts = start_at.unwrap_or(now);
 
-            let result = self.client
+            let result = self
+                .client
                 .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))
-                .update_expression("SET started_at = if_not_exists(started_at, :ts), expires_at = :exp")
+                .update_expression(
+                    "SET started_at = if_not_exists(started_at, :ts), expires_at = :exp",
+                )
                 .expression_attribute_values(":ts", AttributeValue::N(ts.to_string()))
                 .expression_attribute_values(":exp", AttributeValue::N(expires_at()?.to_string()))
                 .condition_expression("attribute_exists(id)")
@@ -231,7 +251,8 @@ impl MenuStore for DynamoDbStore {
         id: String,
     ) -> Pin<Box<dyn Future<Output = Result<Menu, StoreError>> + Send + 'a>> {
         Box::pin(async move {
-            let result = self.client
+            let result = self
+                .client
                 .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))

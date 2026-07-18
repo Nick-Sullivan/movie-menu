@@ -48,7 +48,5 @@ pub fn app(state: AppState) -> Router {
 }
 
 pub async fn serve(listener: TcpListener, router: Router) {
-    axum::serve(listener, router)
-        .await
-        .expect("server error");
+    axum::serve(listener, router).await.expect("server error");
 }

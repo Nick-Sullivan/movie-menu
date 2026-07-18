@@ -1,19 +1,9 @@
-use std::sync::Arc;
-use tasting_shrek_server::{app, serve, store::in_memory::InMemoryStore, AppState};
-use tokio::net::TcpListener;
+mod common;
+
 use serde_json::{json, Value};
 
 async fn spawn_server() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("failed to bind");
-    let addr = listener.local_addr().expect("no local addr");
-    let state = AppState {
-        store: Arc::new(InMemoryStore::new()),
-        images: None,
-    };
-    tokio::spawn(serve(listener, app(state)));
-    format!("http://{addr}")
+    common::spawn_server(None).await
 }
 
 #[tokio::test]
@@ -47,14 +37,26 @@ async fn create_menu_returns_201_with_id() {
     let menu: Value = resp.json().await.expect("failed to deserialise");
     let id = menu["id"].as_str().expect("id must be a string");
     assert_eq!(id.len(), 5, "id must be exactly 5 characters");
-    assert!(id.chars().all(|c| c.is_alphanumeric()), "id must be alphanumeric");
+    assert!(
+        id.chars().all(|c| c.is_alphanumeric()),
+        "id must be alphanumeric"
+    );
     assert_eq!(menu["name"], "My Film");
     assert_eq!(menu["duration_secs"], 7200);
     assert_eq!(menu["schedule"].as_array().unwrap().len(), 1);
     assert_eq!(menu["schedule"][0]["ready_at_secs"], 3600);
     assert_eq!(menu["schedule"][0]["recipe"]["name"], "Garlic bread");
-    assert_eq!(menu["schedule"][0]["recipe"]["steps"].as_array().unwrap().len(), 2);
-    assert!(menu["started_at"].is_null(), "started_at must be null on creation");
+    assert_eq!(
+        menu["schedule"][0]["recipe"]["steps"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(
+        menu["started_at"].is_null(),
+        "started_at must be null on creation"
+    );
     // viewer settings default when not supplied
     assert_eq!(menu["viewer"]["upcoming_count"], 1);
     assert_eq!(menu["viewer"]["show_dish_names"], true);
@@ -184,7 +186,10 @@ async fn update_menu_saves_schedule() {
 
     assert_eq!(updated["schedule"].as_array().unwrap().len(), 1);
     assert_eq!(updated["schedule"][0]["recipe"]["name"], "Popcorn");
-    assert_eq!(updated["schedule"][0]["recipe"]["steps"][0]["note"], "Microwave");
+    assert_eq!(
+        updated["schedule"][0]["recipe"]["steps"][0]["note"],
+        "Microwave"
+    );
 
     let retrieved: Value = client
         .get(format!("{base}/menus/{id}"))
@@ -240,7 +245,10 @@ async fn start_screening_sets_started_at() {
         .await
         .unwrap();
 
-    assert!(started["started_at"].is_number(), "started_at must be a timestamp after start");
+    assert!(
+        started["started_at"].is_number(),
+        "started_at must be a timestamp after start"
+    );
     assert_eq!(started["id"], created["id"]);
 }
 

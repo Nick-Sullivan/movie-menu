@@ -1,18 +1,9 @@
-use std::sync::Arc;
-use tasting_shrek_server::{app, serve, store::in_memory::InMemoryStore, AppState, HealthResponse};
-use tokio::net::TcpListener;
+mod common;
+
+use tasting_shrek_server::HealthResponse;
 
 async fn spawn_server() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("failed to bind");
-    let addr = listener.local_addr().expect("no local addr");
-    let state = AppState {
-        store: Arc::new(InMemoryStore::new()),
-        images: None,
-    };
-    tokio::spawn(serve(listener, app(state)));
-    format!("http://{addr}")
+    common::spawn_server(None).await
 }
 
 #[tokio::test]

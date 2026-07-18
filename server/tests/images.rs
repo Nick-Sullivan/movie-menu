@@ -1,11 +1,10 @@
+mod common;
+
 use std::sync::Arc;
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use serde_json::{json, Value};
-use tasting_shrek_server::{
-    app, images::ImageStore, serve, store::in_memory::InMemoryStore, AppState,
-};
-use tokio::net::TcpListener;
+use tasting_shrek_server::images::ImageStore;
 
 const BUCKET: &str = "test-images-bucket";
 
@@ -24,16 +23,7 @@ fn test_image_store() -> Arc<ImageStore> {
 }
 
 async fn spawn_server(images: Option<Arc<ImageStore>>) -> String {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("failed to bind");
-    let addr = listener.local_addr().expect("no local addr");
-    let state = AppState {
-        store: Arc::new(InMemoryStore::new()),
-        images,
-    };
-    tokio::spawn(serve(listener, app(state)));
-    format!("http://{addr}")
+    common::spawn_server(images).await
 }
 
 // Redirects must not be followed: the presigned URL points at a bucket that

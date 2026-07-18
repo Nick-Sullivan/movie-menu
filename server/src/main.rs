@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use tasting_shrek_server::{
-    app, serve,
+    app,
     images::ImageStore,
+    serve,
     store::{dynamodb::DynamoDbStore, in_memory::InMemoryStore, MenuStore},
     AppState,
 };
@@ -23,8 +24,8 @@ async fn main() {
     };
 
     let store: Arc<dyn MenuStore> = if use_dynamodb {
-        let table = std::env::var("DYNAMODB_TABLE")
-            .expect("DYNAMODB_TABLE required when STORE=dynamodb");
+        let table =
+            std::env::var("DYNAMODB_TABLE").expect("DYNAMODB_TABLE required when STORE=dynamodb");
         Arc::new(DynamoDbStore::new(
             aws_sdk_dynamodb::Client::new(config.as_ref().unwrap()),
             table,

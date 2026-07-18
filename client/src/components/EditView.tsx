@@ -257,7 +257,9 @@ export default function EditView({ menu, setMenu, onBack, onStarted }: Props) {
       // a new photo invalidates any previously uploaded key
       commitRecipe(ri, { image_data, image_key: undefined });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read that image.");
+      setError(
+        err instanceof Error ? err.message : "Couldn't read that image.",
+      );
     }
   }
 

@@ -14,7 +14,7 @@ resource "aws_lambda_function" "worker" {
   environment {
     variables = {
       AWS_LWA_READINESS_CHECK_PATH = "/health"
-      DYNAMODB_TABLE               = data.aws_dynamodb_table.plans.name
+      DYNAMODB_TABLE               = data.aws_dynamodb_table.menus.name
       IMAGES_BUCKET                = data.aws_s3_bucket.images.bucket
       PORT                         = "8080"
       STORE                        = "dynamodb"

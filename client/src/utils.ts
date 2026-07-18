@@ -1,6 +1,6 @@
-import type { ScheduleEntry } from './types';
+import type { ScheduleEntry } from "./types";
 
-const pad = (n: number) => String(n).padStart(2, '0');
+const pad = (n: number) => String(n).padStart(2, "0");
 
 export function fmt(secs: number): string {
   const s = Math.max(0, Math.floor(secs));
@@ -15,7 +15,7 @@ export function fmt(secs: number): string {
 // negative before the screening time.
 export function fmtSigned(secs: number): string {
   const neg = secs < 0;
-  return `${neg ? '−' : ''}${fmt(Math.abs(secs))}`;
+  return `${neg ? "−" : ""}${fmt(Math.abs(secs))}`;
 }
 
 export function fmtHms(secs: number): string {
@@ -24,7 +24,7 @@ export function fmtHms(secs: number): string {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  return `${neg ? '-' : ''}${h}:${pad(m)}:${pad(sec)}`;
+  return `${neg ? "-" : ""}${h}:${pad(m)}:${pad(sec)}`;
 }
 
 export function secsToHms(total: number): { h: number; m: number; s: number } {
@@ -44,7 +44,7 @@ export function fmtDuration(secs: number): string {
   if (h) parts.push(`${h}h`);
   if (m) parts.push(`${m}m`);
   if (s || parts.length === 0) parts.push(`${s}s`);
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 export interface TimelineEntry {

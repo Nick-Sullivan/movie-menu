@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "format": "prettier --write .",
     "test": "node ./node_modules/@playwright/test/cli.js test",
+    "test:ci": "node ./node_modules/@playwright/test/cli.js test --ignore-snapshots",
     "test:update": "node ./node_modules/@playwright/test/cli.js test --update-snapshots"
   },
   "dependencies": {

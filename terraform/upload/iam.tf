@@ -25,7 +25,7 @@ resource "aws_iam_role_policy" "worker_dynamodb" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
-      Resource = data.aws_dynamodb_table.plans.arn
+      Resource = data.aws_dynamodb_table.menus.arn
     }]
   })
 }
