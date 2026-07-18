@@ -29,3 +29,16 @@ resource "aws_iam_role_policy" "worker_dynamodb" {
     }]
   })
 }
+
+resource "aws_iam_role_policy" "worker_s3" {
+  name = "${local.app_name}-worker-s3"
+  role = aws_iam_role.worker_lambda.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:PutObject"]
+      Resource = "${data.aws_s3_bucket.images.arn}/*"
+    }]
+  })
+}

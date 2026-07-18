@@ -12,6 +12,7 @@ use crate::{
     error::AppError,
     models::{Menu, ScheduleEntry, ViewerSettings},
     store::{MenuStore, StoreError},
+    AppState,
 };
 
 const CODE_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -56,10 +57,29 @@ pub async fn create_menu(
 }
 
 pub async fn get_menu(
-    State(store): State<Arc<dyn MenuStore>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Menu>, AppError> {
-    let menu = store.get(id).await?;
+    let menu = state.store.get(id).await?;
+
+    // Opening a menu extends its images' lives to match the menu's own TTL
+    // (which the store refreshes on read). Best-effort and off the request
+    // path — a failed refresh only risks an early lifecycle expiry.
+    if let Some(images) = &state.images {
+        for key in menu
+            .schedule
+            .iter()
+            .filter_map(|e| e.recipe.image_key.clone())
+        {
+            let images = images.clone();
+            tokio::spawn(async move {
+                if let Err(e) = images.refresh(&key).await {
+                    tracing::warn!("failed to refresh image {key}: {e}");
+                }
+            });
+        }
+    }
+
     Ok(Json(menu))
 }
 

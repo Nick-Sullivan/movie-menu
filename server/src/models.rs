@@ -13,6 +13,10 @@ pub struct Recipe {
     #[serde(default)]
     pub prep: String,
     pub steps: Vec<RecipeStep>,
+    /// S3 key of the dish photo, uploaded via a presigned URL when the
+    /// screening starts; served back through GET /images/{key}.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

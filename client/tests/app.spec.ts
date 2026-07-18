@@ -127,7 +127,7 @@ test('edit view - expand a dish shows steps that add up to when it appears', asy
   await page.click('[aria-label="Expand dish"]');
   // Garlic bread appears at 1:00:00; steps preheat(5m) then bake(10m).
   // Preheat: 1:00:00 - 15m = 0:45:00; bake: 1:00:00 - 10m = 0:50:00; appears: 1:00:00.
-  const fires = page.locator('.step-fire');
+  const fires = page.locator('.step-fire:not(.step-fire--prep)');
   await expect(fires.nth(0)).toHaveText('0:45:00');
   await expect(fires.nth(1)).toHaveText('0:50:00');
   await expect(page.locator('.step-fire--final')).toHaveText('1:00:00');
@@ -167,9 +167,9 @@ test('a recipe prep note shows before the steps, and in the chef timeline', asyn
   }];
   await goToEditView(page, { schedule }, FIXED_SECS - 300);
 
-  // edit view: the prep field sits above the step list
+  // edit view: prep is the first row of the step timeline
   await page.click('[aria-label="Expand dish"]');
-  const prepInput = page.locator('.prep-row input');
+  const prepInput = page.locator('.step-row--prep input');
   await expect(prepInput).toHaveValue('Slice the loaf, soften the butter');
   await expect(page).toHaveScreenshot('edit-view-prep-note.png');
 
@@ -451,6 +451,112 @@ test('a bad code in the URL falls back to the home screen', async ({ page }) => 
   await expect(page).not.toHaveURL(/code=/);
 });
 
+// 1×1 red pixel PNG — decodes in canvas, re-encodes to a JPEG data URL.
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+async function addPhotoToFirstDish(page: Page) {
+  await page.locator('.btn-photo input[type="file"]').first().setInputFiles({
+    name: 'dish.png',
+    mimeType: 'image/png',
+    buffer: TINY_PNG,
+  });
+  await expect(page.locator('.photo-thumb').first()).toBeVisible();
+}
+
+test('a dish photo is downscaled to a local data URL and survives a refresh', async ({ page }) => {
+  // local create flow: photos persist via localStorage (joined menus re-fetch
+  // from the server on refresh, so local-only edits don't survive there)
+  await page.clock.setFixedTime(FIXED);
+  await page.route('http://localhost:3001/**', route => route.fulfill({ status: 500, json: {} }));
+  await page.goto('/tasting-shrek/');
+  await page.click('text=Create a menu');
+  await page.waitForSelector('.edit-view');
+  await page.keyboard.press('Enter'); // leave the name field
+  await page.click('text=+ Add recipe'); // new dishes start expanded
+
+  await addPhotoToFirstDish(page);
+  await expect(page.locator('.photo-thumb')).toHaveAttribute('src', /^data:image\/jpeg/);
+  await expect(page).toHaveScreenshot('edit-view-photo.png');
+
+  // photo (as a data URL) survives a refresh without touching the server
+  await page.reload();
+  await page.waitForSelector('.edit-view');
+  await page.click('[aria-label="Expand dish"]');
+  await expect(page.locator('.photo-thumb')).toBeVisible();
+
+  // removing it swaps back to the add button
+  await page.click('[aria-label="Remove photo"]');
+  await expect(page.locator('.photo-thumb')).toHaveCount(0);
+  await expect(page.locator('.btn-photo')).toContainText('+ add photo');
+});
+
+test('starting a screening uploads photos and sends the key, never the data URL', async ({ page }) => {
+  await goToEditView(page);
+
+  // registered after goToEditView's catch-all, so these take precedence
+  await page.route('http://localhost:3001/images/presign', route =>
+    route.fulfill({ json: { uploads: [{ key: 'testkey0123', url: 'http://localhost:3001/mock-s3/testkey0123' }] } }),
+  );
+  let s3PutContentType: string | undefined;
+  await page.route('http://localhost:3001/mock-s3/**', route => {
+    s3PutContentType = route.request().headers()['content-type'];
+    return route.fulfill({ status: 200, body: '' });
+  });
+  let putBody: { schedule: Array<{ recipe: Record<string, unknown> }> } | undefined;
+  await page.route('http://localhost:3001/menus/ABC12', route => {
+    if (route.request().method() !== 'PUT') return route.fallback();
+    putBody = route.request().postDataJSON();
+    return route.fulfill({ json: { ...mockMenu, schedule: putBody!.schedule } });
+  });
+
+  await page.click('[aria-label="Expand dish"]');
+  await addPhotoToFirstDish(page);
+  await startFilm(page);
+
+  expect(s3PutContentType).toBe('image/jpeg');
+  const recipe = putBody!.schedule[0].recipe;
+  expect(recipe.image_key).toBe('testkey0123');
+  expect(recipe.image_data).toBeUndefined();
+});
+
+test('viewer sees the now-serving dish photo via the image endpoint', async ({ page }) => {
+  const schedule = [
+    { ready_at_secs: 60, recipe: { name: 'Popcorn', image_key: 'photokey0001', steps: [] } },
+    { ready_at_secs: 4000, recipe: { name: 'Pasta', image_key: 'photokey0002', steps: [] } },
+  ];
+  // film 5 minutes in: popcorn (1:00) is on the table, pasta upcoming
+  await goToEditView(page, { schedule }, FIXED_SECS - 300);
+  await page.route('http://localhost:3001/images/photokey*', route =>
+    route.fulfill({ contentType: 'image/png', body: TINY_PNG }),
+  );
+  await startFilm(page);
+  await page.click('.role-toggle >> text=Viewer');
+
+  await expect(page.locator('.now-photo')).toBeVisible();
+  await expect(page.locator('.now-photo')).toHaveAttribute('src', /\/images\/photokey0001$/);
+});
+
+test('hidden dish names also hide upcoming photos', async ({ page }) => {
+  const schedule = [
+    { ready_at_secs: 3600, recipe: { name: 'Pasta', image_key: 'photokey0002', steps: [] } },
+    { ready_at_secs: 5400, recipe: { name: 'Dessert', image_key: 'photokey0003', steps: [] } },
+  ];
+  await goToEditView(
+    page,
+    { schedule, viewer: { upcoming_count: 2, show_dish_names: false } },
+    FIXED_SECS - 300,
+  );
+  await startFilm(page);
+  await page.click('.role-toggle >> text=Viewer');
+
+  await expect(page.locator('.upcoming-row')).toHaveCount(2);
+  await expect(page.locator('.upcoming-note').first()).toHaveText('Mystery dish');
+  await expect(page.locator('.upcoming-thumb')).toHaveCount(0);
+});
+
 test('upload a menu file loads it locally without a code', async ({ page }) => {
   await page.goto('/tasting-shrek/');
   await page.locator('input[type="file"]').setInputFiles({
@@ -462,7 +568,15 @@ test('upload a menu file loads it locally without a code', async ({ page }) => {
       name: 'Uploaded Night',
       duration_secs: 3600,
       schedule: [
-        { ready_at_secs: 1800, recipe: { name: 'Nachos', steps: [{ duration_secs: 300, note: 'Melt cheese' }] } },
+        {
+          ready_at_secs: 1800,
+          recipe: {
+            name: 'Nachos',
+            steps: [{ duration_secs: 300, note: 'Melt cheese' }],
+            image_data: `data:image/png;base64,${TINY_PNG.toString('base64')}`,
+            image_key: 'someone-elses-stale-key',
+          },
+        },
       ],
     })),
   });
@@ -470,4 +584,8 @@ test('upload a menu file loads it locally without a code', async ({ page }) => {
   await page.waitForSelector('.edit-view');
   await expect(page.locator('h2.menu-name')).toHaveText(/Uploaded Night/);
   await expect(page.locator('input.recipe-name-input')).toHaveValue('Nachos');
+
+  // the photo travels inside the file; a foreign image_key is never trusted
+  await page.click('[aria-label="Expand dish"]');
+  await expect(page.locator('.photo-thumb')).toHaveAttribute('src', /^data:image\/png/);
 });

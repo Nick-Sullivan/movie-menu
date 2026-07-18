@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { updateMenu, createMenu, startScreening, exportMenuFile } from "../api";
+import { updateMenu, createMenu, startScreening } from "../api";
+import { exportMenuFile } from "../menuFile";
+import {
+  downscaleImage,
+  uploadMenuImages,
+  withLocalImageData,
+  recipeImageSrc,
+} from "../photos";
 import { fmt, fmtHms, fmtDuration } from "../utils";
 import HmsInput from "./HmsInput";
 import type { Menu, ScheduleEntry, ViewerSettings } from "../types";
@@ -232,26 +239,53 @@ export default function EditView({ menu, setMenu, onBack, onStarted }: Props) {
     setDraft((prev) => ({ ...prev, viewer: { ...prev.viewer, ...patch } }));
   }
 
+  // Photo changes have no blur event to piggyback on — commit immediately.
+  function commitRecipe(ri: number, patch: Partial<ScheduleEntry["recipe"]>) {
+    commit({
+      ...draft,
+      schedule: draft.schedule.map((e, i) =>
+        i === ri ? { ...e, recipe: { ...e.recipe, ...patch } } : e,
+      ),
+    });
+  }
+
+  async function handlePhotoPick(ri: number, file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    try {
+      const image_data = await downscaleImage(file);
+      // a new photo invalidates any previously uploaded key
+      commitRecipe(ri, { image_data, image_key: undefined });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that image.");
+    }
+  }
+
   // startAt: screening time in unix seconds. The only moment the server
-  // learns about the menu: create (or refresh) it there, then start.
+  // learns about the menu: upload the dish photos to S3, create (or refresh)
+  // the menu there, then start. Server responses are re-merged with the local
+  // photo data, which never leaves the browser.
   async function handleStart(startAt: number) {
     setError(null);
     setStarting(true);
     try {
+      const schedule = await uploadMenuImages(draft.schedule);
+      const data = { ...draft, schedule };
+      setDraft(data);
       let id = menu.id;
       if (isLocal) {
         const created = await createMenu(
-          draft.name,
-          draft.duration_secs,
-          draft.schedule,
-          draft.viewer,
+          data.name,
+          data.duration_secs,
+          schedule,
+          data.viewer,
         );
-        setMenu(created);
+        setMenu(withLocalImageData(created, schedule));
         id = created.id;
       } else {
-        await updateMenu(id, draft);
+        await updateMenu(id, data);
       }
-      setMenu(await startScreening(id, startAt));
+      setMenu(withLocalImageData(await startScreening(id, startAt), schedule));
       onStarted?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Start failed");
@@ -435,19 +469,52 @@ export default function EditView({ menu, setMenu, onBack, onStarted }: Props) {
 
               {isOpen && (
                 <>
-                  <label className="prep-row">
-                    <span className="prep-label">Prep</span>
-                    <input
-                      type="text"
-                      className="step-note-input"
-                      value={entry.recipe.prep ?? ""}
-                      placeholder="Before the first step (chop, marinate…)"
-                      onChange={(e) =>
-                        updateRecipe(ri, { prep: e.target.value })
-                      }
-                    />
-                  </label>
+                  {recipeImageSrc(entry.recipe) && (
+                    <div className="photo-row">
+                      <img
+                        className="photo-thumb"
+                        src={recipeImageSrc(entry.recipe)}
+                        alt={`${entry.recipe.name || "Dish"} photo`}
+                      />
+                      <label className="btn-text btn-photo">
+                        replace
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            handlePhotoPick(ri, e.target.files?.[0])
+                          }
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="btn-text"
+                        onClick={() =>
+                          commitRecipe(ri, {
+                            image_data: undefined,
+                            image_key: undefined,
+                          })
+                        }
+                        aria-label="Remove photo"
+                      >
+                        remove
+                      </button>
+                    </div>
+                  )}
                   <ol className="step-list">
+                    {/* prep is the timeline's first moment — same rail, same dot */}
+                    <li className="step-row step-row--prep">
+                      <span className="step-fire step-fire--prep">prep</span>
+                      <input
+                        type="text"
+                        className="step-note-input"
+                        value={entry.recipe.prep ?? ""}
+                        placeholder="Before the first step (chop, marinate…)"
+                        onChange={(e) =>
+                          updateRecipe(ri, { prep: e.target.value })
+                        }
+                      />
+                    </li>
                     {entry.recipe.steps.map((step, si) => (
                       <li key={si} className="step-row">
                         <span
@@ -494,13 +561,27 @@ export default function EditView({ menu, setMenu, onBack, onStarted }: Props) {
                     </li>
                   </ol>
 
-                  <button
-                    type="button"
-                    className="btn-add-step"
-                    onClick={() => addStep(ri)}
-                  >
-                    + add step
-                  </button>
+                  <div className="step-actions">
+                    <button
+                      type="button"
+                      className="btn-add-step"
+                      onClick={() => addStep(ri)}
+                    >
+                      + add step
+                    </button>
+                    {!recipeImageSrc(entry.recipe) && (
+                      <label className="btn-add-step btn-photo">
+                        + add photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            handlePhotoPick(ri, e.target.files?.[0])
+                          }
+                        />
+                      </label>
+                    )}
+                  </div>
                 </>
               )}
             </div>

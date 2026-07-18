@@ -54,11 +54,17 @@ export default function App() {
       .finally(() => setRestoring(false));
   }, []);
 
-  // Local persistence: whatever menu is open survives a refresh.
+  // Local persistence: whatever menu is open survives a refresh. Photos ride
+  // along as data URLs, so a menu can outgrow the localStorage quota — the
+  // app keeps working from memory, the refresh-survival just degrades.
   useEffect(() => {
     if (restoring) return;
-    if (menu) localStorage.setItem(MENU_KEY, JSON.stringify(menu));
-    else localStorage.removeItem(MENU_KEY);
+    try {
+      if (menu) localStorage.setItem(MENU_KEY, JSON.stringify(menu));
+      else localStorage.removeItem(MENU_KEY);
+    } catch (err) {
+      console.warn('menu too large to persist locally', err);
+    }
   }, [menu, restoring]);
 
   // Mirror the open menu's code (and chef status) into the URL so a refresh

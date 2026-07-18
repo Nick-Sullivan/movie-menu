@@ -8,6 +8,11 @@ export interface Recipe {
   name: string;
   prep?: string; // do-ahead note, shown before the first step
   steps: RecipeStep[]; // ordered; dish ready after the last step
+  image_key?: string; // S3 key of the dish photo, set once uploaded at start time
+  // Local source of truth for the photo: a downscaled data URL that lives in
+  // localStorage and export files. Uploaded to S3 when a screening starts;
+  // never sent to the server itself (the menu must fit in one DynamoDB item).
+  image_data?: string;
 }
 
 export interface ScheduleEntry {

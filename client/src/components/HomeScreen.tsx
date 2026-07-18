@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { parseMenuFile } from "../api";
+import { parseMenuFile } from "../menuFile";
 import type { Menu } from "../types";
 
 interface Props {

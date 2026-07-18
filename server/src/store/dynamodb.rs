@@ -24,6 +24,14 @@ impl DynamoDbStore {
 
 const TTL_SECS: u64 = 7 * 24 * 60 * 60;
 
+fn expires_at() -> Result<u64, StoreError> {
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| StoreError::Internal(e.to_string()))?
+        .as_secs()
+        + TTL_SECS)
+}
+
 fn menu_to_item(menu: &Menu) -> Result<HashMap<String, AttributeValue>, StoreError> {
     let schedule_json = serde_json::to_string(&menu.schedule)
         .map_err(|e| StoreError::Internal(e.to_string()))?;
@@ -99,14 +107,8 @@ impl MenuStore for DynamoDbStore {
         menu: Menu,
     ) -> Pin<Box<dyn Future<Output = Result<Menu, StoreError>> + Send + 'a>> {
         Box::pin(async move {
-            let expires_at = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_err(|e| StoreError::Internal(e.to_string()))?
-                .as_secs()
-                + TTL_SECS;
-
             let mut item = menu_to_item(&menu)?;
-            item.insert("expires_at".to_string(), AttributeValue::N(expires_at.to_string()));
+            item.insert("expires_at".to_string(), AttributeValue::N(expires_at()?.to_string()));
 
             self.client
                 .put_item()
@@ -131,16 +133,31 @@ impl MenuStore for DynamoDbStore {
         id: String,
     ) -> Pin<Box<dyn Future<Output = Result<Menu, StoreError>> + Send + 'a>> {
         Box::pin(async move {
+            // Opening a menu extends its life: refresh the TTL and read the
+            // item in one atomic call (the condition stops the "update" from
+            // creating a phantom item for an unknown id).
             let result = self.client
-                .get_item()
+                .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))
+                .update_expression("SET expires_at = :exp")
+                .expression_attribute_values(":exp", AttributeValue::N(expires_at()?.to_string()))
+                .condition_expression("attribute_exists(id)")
+                .return_values(ReturnValue::AllNew)
                 .send()
                 .await
-                .map_err(|e| StoreError::Internal(e.to_string()))?;
+                .map_err(|e| {
+                    if is_conditional_check_failed_update(&e) {
+                        StoreError::NotFound(id.clone())
+                    } else {
+                        StoreError::Internal(e.to_string())
+                    }
+                })?;
 
-            let item = result.item().ok_or_else(|| StoreError::NotFound(id))?;
-            item_to_menu(item)
+            let attributes = result.attributes().ok_or_else(|| {
+                StoreError::Internal("update_item returned no attributes".to_string())
+            })?;
+            item_to_menu(attributes)
         })
     }
 
@@ -149,7 +166,10 @@ impl MenuStore for DynamoDbStore {
         menu: Menu,
     ) -> Pin<Box<dyn Future<Output = Result<Menu, StoreError>> + Send + 'a>> {
         Box::pin(async move {
-            let item = menu_to_item(&menu)?;
+            // Full replace, so expires_at must be re-set or the edited menu
+            // would lose its TTL and live forever.
+            let mut item = menu_to_item(&menu)?;
+            item.insert("expires_at".to_string(), AttributeValue::N(expires_at()?.to_string()));
             self.client
                 .put_item()
                 .table_name(&self.table_name)
@@ -184,8 +204,9 @@ impl MenuStore for DynamoDbStore {
                 .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))
-                .update_expression("SET started_at = if_not_exists(started_at, :ts)")
+                .update_expression("SET started_at = if_not_exists(started_at, :ts), expires_at = :exp")
                 .expression_attribute_values(":ts", AttributeValue::N(ts.to_string()))
+                .expression_attribute_values(":exp", AttributeValue::N(expires_at()?.to_string()))
                 .condition_expression("attribute_exists(id)")
                 .return_values(ReturnValue::AllNew)
                 .send()
@@ -214,7 +235,8 @@ impl MenuStore for DynamoDbStore {
                 .update_item()
                 .table_name(&self.table_name)
                 .key("id", AttributeValue::S(id.clone()))
-                .update_expression("REMOVE started_at")
+                .update_expression("REMOVE started_at SET expires_at = :exp")
+                .expression_attribute_values(":exp", AttributeValue::N(expires_at()?.to_string()))
                 .condition_expression("attribute_exists(id)")
                 .return_values(ReturnValue::AllNew)
                 .send()

@@ -552,6 +552,29 @@ input.menu-name-input:focus { border: none; box-shadow: inset 0 -2px 0 var(--acc
   white-space: nowrap;
 }
 
+/* ── Dish photo ── */
+/* Shares the step timeline's indent and quiet text actions so the expanded
+   dish reads as one block. */
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 0.35rem 1.4rem;
+}
+
+.photo-thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* the label acts as the button; the real file input stays out of sight */
+.btn-photo input[type='file'] {
+  display: none;
+}
+
 /* ── Steps: vertical timeline ── */
 .step-list {
   list-style: none;
@@ -615,19 +638,14 @@ input.menu-name-input:focus { border: none; box-shadow: inset 0 -2px 0 var(--acc
 .step-note-input { flex: 1; min-width: 0; font-size: 0.9rem; }
 
 /* Do-ahead note, sitting above the timed steps */
-.prep-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 0.35rem;
-}
-.prep-label {
+/* prep sits in the timeline's time column, styled as a quiet tag */
+.step-fire--prep {
+  font-family: inherit;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 .step-appears { margin-top: 0.15rem; }
@@ -635,19 +653,32 @@ input.menu-name-input:focus { border: none; box-shadow: inset 0 -2px 0 var(--acc
 @media (prefers-color-scheme: dark) { .step-fire--final { color: var(--warm); } }
 .step-appears-note { font-size: 0.92rem; font-weight: 700; }
 
-.btn-add-step {
+.btn-add-step,
+.btn-text {
   align-self: flex-start;
   background: none;
   border: none;
   padding: 0.1rem 0;
-  margin-left: 1.4rem;
   color: var(--accent);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  /* <label>s double as buttons here — undo the global label treatment */
+  text-transform: none;
+  letter-spacing: normal;
 }
-.btn-add-step:hover { text-decoration: underline; }
+.btn-add-step { margin-left: 1.4rem; }
+.btn-add-step:hover, .btn-text:hover { text-decoration: underline; }
+
+/* add-step and add-photo side by side, sharing the timeline indent */
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.3rem;
+  margin-left: 1.4rem;
+}
+.step-actions .btn-add-step { margin-left: 0; }
 
 /* ── Running view ── */
 .running-view {
@@ -738,8 +769,24 @@ input.menu-name-input:focus { border: none; box-shadow: inset 0 -2px 0 var(--acc
   border-left: 3px solid var(--warm);
   padding: 0.15rem 0 0.2rem 1.1rem;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.now-strip-text {
+  display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  min-width: 0;
+}
+
+.now-photo {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .now-strip .label { color: var(--warm-dark); }
@@ -978,7 +1025,15 @@ input.menu-name-input:focus { border: none; box-shadow: inset 0 -2px 0 var(--acc
 }
 @media (prefers-color-scheme: dark) { .upcoming-time { color: var(--accent); } }
 
-.upcoming-note { font-size: 0.92rem; min-width: 0; }
+.upcoming-note { font-size: 0.92rem; min-width: 0; flex: 1; }
+
+.upcoming-thumb {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: calc(var(--radius-sm) / 2);
+  flex-shrink: 0;
+}
 
 
 /* ── Viewer-screen settings (edit view) ── */

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fmt, fmtSigned, fmtHms, buildTimeline } from '../utils';
 import { stopScreening } from '../api';
+import { recipeImageSrc } from '../photos';
 import type { Menu } from '../types';
 import { DEFAULT_VIEWER } from '../types';
 
@@ -218,9 +219,18 @@ export default function RunningView({ menu, setMenu, chef }: Props) {
         <>
           {lastDish && (
             <div className="now-strip">
-              <span className="label">Now serving</span>
-              {/* already on the table — no longer a surprise, never masked */}
-              <p className="milestone-note">{lastDish.recipe.name || 'Dish'}</p>
+              <div className="now-strip-text">
+                <span className="label">Now serving</span>
+                {/* already on the table — no longer a surprise, never masked */}
+                <p className="milestone-note">{lastDish.recipe.name || 'Dish'}</p>
+              </div>
+              {recipeImageSrc(lastDish.recipe) && (
+                <img
+                  className="now-photo"
+                  src={recipeImageSrc(lastDish.recipe)}
+                  alt={lastDish.recipe.name || 'Dish'}
+                />
+              )}
             </div>
           )}
 
@@ -251,6 +261,14 @@ export default function RunningView({ menu, setMenu, chef }: Props) {
                   <li key={i} className="upcoming-row">
                     <span className="upcoming-time">{fmtHms(d.ready_at_secs)}</span>
                     <span className="upcoming-note">{dishName(d.recipe.name)}</span>
+                    {/* a photo would spoil a masked dish just as much as its name */}
+                    {viewerCfg.show_dish_names && recipeImageSrc(d.recipe) && (
+                      <img
+                        className="upcoming-thumb"
+                        src={recipeImageSrc(d.recipe)}
+                        alt=""
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
