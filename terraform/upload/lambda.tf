@@ -41,13 +41,6 @@ resource "aws_lambda_permission" "worker_public_url_invoke" {
 resource "aws_lambda_function_url" "worker" {
   function_name      = aws_lambda_function.worker.function_name
   authorization_type = "NONE"
-  cors {
-    allow_credentials = false
-    allow_origins     = ["*"]
-    allow_methods     = ["GET", "POST", "PUT"]
-    allow_headers     = ["content-type"]
-    max_age           = 86400
-  }
 }
 
 output "worker_url" {
