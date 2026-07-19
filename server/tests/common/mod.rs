@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tasting_shrek_server::{
+use the_movie_menu_server::{
     app, images::ImageStore, serve, store::in_memory::InMemoryStore, AppState,
 };
 use tokio::net::TcpListener;

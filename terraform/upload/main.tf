@@ -2,12 +2,12 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.33.0"
+      version = "6.28.0"
     }
   }
   backend "s3" {
     bucket = "nicks-terraform-states"
-    key    = "tasting_shrek/upload/terraform.tfstate"
+    key    = "the_movie_menu/upload/terraform.tfstate"
     region = "ap-southeast-2"
   }
 }

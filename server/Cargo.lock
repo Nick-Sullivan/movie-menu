@@ -2275,7 +2275,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tasting-shrek-server"
+name = "the-movie-menu-server"
 version = "0.1.0"
 dependencies = [
  "aws-config",

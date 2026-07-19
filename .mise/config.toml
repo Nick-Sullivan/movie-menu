@@ -8,16 +8,6 @@ description = "Build the client for production"
 dir         = "client"
 run         = "npm run build"
 
-[tasks."client:install"]
-description = "Install client dependencies from the lockfile"
-dir         = "client"
-run         = "npm ci"
-
-[tasks."client:install:browser"]
-description = "Install Playwright's bundled Chromium (CI; WSL uses the system one)"
-dir         = "client"
-run         = "node ./node_modules/@playwright/test/cli.js install --with-deps chromium"
-
 [tasks."client:dev"]
 description = "Run the client dev server"
 dir         = "client"
@@ -27,6 +17,16 @@ run         = "npm run dev"
 description = "Run the client dev server pointed at the live Lambda"
 dir         = "client"
 run         = "VITE_API_URL=$(terraform -chdir=../terraform/upload output -raw worker_url) npm run dev"
+
+[tasks."client:install"]
+description = "Install client dependencies from the lockfile"
+dir         = "client"
+run         = "npm ci"
+
+[tasks."client:install:browser"]
+description = "Install Playwright's bundled Chromium (CI; WSL uses the system one)"
+dir         = "client"
+run         = "node ./node_modules/@playwright/test/cli.js install --with-deps chromium"
 
 [tasks."client:test"]
 description = "Run Playwright tests (auto-starts Vite dev server)"
@@ -56,6 +56,11 @@ description = "Build the server for production"
 dir         = "server"
 run         = "cargo build --release"
 
+[tasks."server:build:image"]
+description = "Build the server Docker image"
+dir         = "server"
+run         = "docker build -t the-movie-menu:latest ."
+
 [tasks."server:dev"]
 description = "Run the server in development mode"
 dir         = "server"
@@ -64,7 +69,7 @@ run         = "cargo run"
 [tasks."server:dev:cloud"]
 description = "Run the server locally pointed at the production DynamoDB table"
 dir         = "server"
-run         = "STORE=dynamodb DYNAMODB_TABLE=tasting-shrek-menus cargo run"
+run         = "STORE=dynamodb DYNAMODB_TABLE=the-movie-menu-data cargo run"
 
 [tasks."server:test"]
 description = "Run server integration tests"

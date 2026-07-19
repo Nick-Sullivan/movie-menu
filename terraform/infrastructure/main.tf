@@ -7,7 +7,7 @@ terraform {
   }
   backend "s3" {
     bucket = "nicks-terraform-states"
-    key    = "tasting_shrek/infrastructure/terraform.tfstate"
+    key    = "the_movie_menu/infrastructure/terraform.tfstate"
     region = "ap-southeast-2"
   }
 }

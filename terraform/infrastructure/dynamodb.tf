@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "menus" {
-  name         = "${local.app_name_lower}-menus"
+  name         = "${local.app_name_lower}-data"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "id"
 

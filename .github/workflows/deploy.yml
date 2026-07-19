@@ -9,18 +9,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: "Test"
+  deploy:
+    name: "Test and deploy"
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Setup AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "ap-southeast-2"
+
       - name: Setup mise
         uses: jdx/mise-action@v2
         with:
-          install_args: node rust
+          install_args: node rust terraform
 
       - name: Cache rust build
         uses: Swatinem/rust-cache@v2
@@ -39,27 +46,6 @@ jobs:
       - name: Run client tests
         run: mise run client:test:ci
 
-  build:
-    name: "Deploy"
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: "ap-southeast-2"
-
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          install_args: node terraform
-
       - name: Initialise terraform state (infra)
         working-directory: terraform/infrastructure
         run: terraform init
@@ -72,11 +58,11 @@ jobs:
         working-directory: terraform/upload
         run: terraform init
 
-      - name: Install client dependencies
-        run: mise run client:install
-
       - name: Build client
         run: VITE_API_URL=$(terraform -chdir=terraform/upload output -raw worker_url) mise run client:build
+
+      - name: Build server image
+        run: mise run server:build:image
 
       - name: Apply terraform state (upload)
         working-directory: terraform/upload

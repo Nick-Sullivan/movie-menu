@@ -4,12 +4,12 @@ locals {
   prefix_parameter = "/WebsiteCv/production"
 
   build_folder   = "${path.root}/../../client/dist"
-  app_name       = "TastingShrek"
-  app_name_lower = "tasting-shrek"
+  app_name       = "TheMovieMenu"
+  app_name_lower = "the-movie-menu"
   s3_bucket      = "nickdavesullivan.com"
-  base_path      = "tasting-shrek"
+  base_path      = "the-movie-menu"
   tags = {
-    Project     = "Tasting Shrek"
+    Project     = "The Movie Menu"
     Environment = "production"
   }
 }

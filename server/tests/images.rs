@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use serde_json::{json, Value};
-use tasting_shrek_server::images::ImageStore;
+use the_movie_menu_server::images::ImageStore;
 
 const BUCKET: &str = "test-images-bucket";
 

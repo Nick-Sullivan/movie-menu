@@ -16,7 +16,7 @@ interface Props {
 // chef sees every step; viewer sees only what the menu's viewer settings
 // allow (next N dishes, names optionally hidden).
 type Role = "chef" | "viewer";
-const ROLE_KEY = "tasting-shrek:role";
+const ROLE_KEY = "the-movie-menu:role";
 
 const MYSTERY = "Mystery dish";
 

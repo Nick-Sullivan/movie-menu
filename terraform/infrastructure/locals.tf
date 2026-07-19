@@ -1,9 +1,9 @@
 locals {
-  app_name       = "TastingShrek"
-  app_name_lower = "tasting-shrek"
+  app_name       = "TheMovieMenu"
+  app_name_lower = "the-movie-menu"
   aws_region     = "ap-southeast-2"
   tags = {
-    Project     = "Tasting Shrek"
+    Project     = "The Movie Menu"
     Environment = "production"
   }
 }

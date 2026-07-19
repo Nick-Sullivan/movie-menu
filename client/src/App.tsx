@@ -9,7 +9,7 @@ import RunningView from "./components/RunningView";
 
 type Mode = "home" | "join";
 
-const MENU_KEY = "tasting-shrek:menu";
+const MENU_KEY = "the-movie-menu:menu";
 
 function urlParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);

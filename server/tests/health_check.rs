@@ -1,6 +1,6 @@
 mod common;
 
-use tasting_shrek_server::HealthResponse;
+use the_movie_menu_server::HealthResponse;
 
 async fn spawn_server() -> String {
     common::spawn_server(None).await

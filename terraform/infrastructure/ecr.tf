@@ -39,7 +39,7 @@ resource "terraform_data" "docker_push" {
       set -e
       aws ecr get-login-password --region ${local.aws_region} \
         | docker login --username AWS --password-stdin ${aws_ecr_repository.server.repository_url}
-      docker build -t ${aws_ecr_repository.server.repository_url}:latest ${path.root}/../../server
+      docker build --network=host -t ${aws_ecr_repository.server.repository_url}:latest ${path.root}/../../server
       docker push ${aws_ecr_repository.server.repository_url}:latest
       UNTAGGED=$(aws ecr list-images --region ${local.aws_region} --repository-name ${aws_ecr_repository.server.name} --filter tagStatus=UNTAGGED --query 'imageIds[*]' --output json)
       if [ "$UNTAGGED" != "[]" ]; then

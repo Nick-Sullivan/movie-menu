@@ -20,7 +20,7 @@ export default defineConfig({
   },
   webServer: {
     command: "node_modules/.bin/vite",
-    url: "http://localhost:5173/tasting-shrek/",
+    url: "http://localhost:5173/the-movie-menu/",
     reuseExistingServer: true,
   },
   projects: [{ name: "chromium" }],

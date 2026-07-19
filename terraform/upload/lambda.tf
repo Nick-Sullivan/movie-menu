@@ -22,6 +22,22 @@ resource "aws_lambda_function" "worker" {
   }
 }
 
+resource "aws_lambda_permission" "worker_public_url" {
+  statement_id           = "AllowPublicFunctionUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.worker.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "worker_public_url_invoke" {
+  statement_id             = "AllowPublicFunctionUrlInvoke"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.worker.function_name
+  principal                = "*"
+  invoked_via_function_url = true
+}
+
 resource "aws_lambda_function_url" "worker" {
   function_name      = aws_lambda_function.worker.function_name
   authorization_type = "NONE"

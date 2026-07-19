@@ -105,7 +105,7 @@ async function goToEditView(
 ) {
   await page.clock.setFixedTime(FIXED);
   await mockApi(page, menuOverride, startedAt);
-  await page.goto("/tasting-shrek/?chef=true");
+  await page.goto("/the-movie-menu/?chef=true");
   await page.click("text=Join a screening");
   await page.fill(".code-input", "ABC12"); // lookup fires automatically at 5 chars
   await page.waitForSelector(".edit-view");
@@ -119,13 +119,13 @@ async function startFilm(page: Page) {
 }
 
 test("home screen", async ({ page }) => {
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await expect(page).toHaveScreenshot("home.png");
 });
 
 test("create a menu goes straight to the edit view", async ({ page }) => {
   await page.clock.setFixedTime(FIXED);
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Create a menu");
   await page.waitForSelector(".edit-view");
   // a fresh local menu: no code anywhere, and naming starts focused
@@ -134,7 +134,7 @@ test("create a menu goes straight to the edit view", async ({ page }) => {
 });
 
 test("join form", async ({ page }) => {
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Join a screening");
   await expect(page).toHaveScreenshot("join-form.png");
 });
@@ -465,7 +465,7 @@ test("refresh during a screening returns to it via the code in the URL", async (
   await page.clock.setFixedTime(FIXED);
   await mockApi(page, { started_at: FIXED_SECS - 300 });
   // simulates a refresh: loading the app cold with a code in the URL
-  await page.goto("/tasting-shrek/?code=ABC12");
+  await page.goto("/the-movie-menu/?code=ABC12");
   await page.waitForSelector(".running-view");
   await expect(page.locator(".code-small")).toContainText("ABC12");
   await expect(page.locator(".film-clock-value")).toHaveText("05:00");
@@ -478,7 +478,7 @@ test("a plain code link is viewer-only; ?chef=true unlocks the chef screen", asy
   await mockApi(page, { started_at: FIXED_SECS - 300 });
 
   // without chef=true: viewer screen, no role toggle, no stop control
-  await page.goto("/tasting-shrek/?code=ABC12");
+  await page.goto("/the-movie-menu/?code=ABC12");
   await page.waitForSelector(".running-view");
   await expect(page.locator(".countdown")).toBeVisible();
   await expect(page.locator(".role-toggle")).toHaveCount(0);
@@ -486,7 +486,7 @@ test("a plain code link is viewer-only; ?chef=true unlocks the chef screen", asy
   await expect(page.locator(".btn-back")).toHaveCount(0);
 
   // with chef=true: chef list and the toggle are available
-  await page.goto("/tasting-shrek/?code=ABC12&chef=true");
+  await page.goto("/the-movie-menu/?code=ABC12&chef=true");
   await page.waitForSelector(".running-view");
   await expect(page.locator(".chef-row").first()).toBeVisible();
   await expect(page.locator(".role-toggle")).toBeVisible();
@@ -496,7 +496,7 @@ test("starting the film marks you as the chef in the URL", async ({ page }) => {
   // create → start, with no pre-existing chef status: starting grants it
   await page.clock.setFixedTime(FIXED);
   await mockApi(page, {}, FIXED_SECS - 300);
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Create a menu");
   await page.waitForSelector(".edit-view");
   await startFilm(page);
@@ -518,7 +518,7 @@ test("a menu being edited survives a refresh without touching the server", async
   await page.route("http://localhost:3001/**", (route) =>
     route.fulfill({ status: 500, json: {} }),
   );
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Create a menu");
   await page.waitForSelector(".edit-view");
   await page.fill("input.menu-name-input", "Local Night");
@@ -534,7 +534,7 @@ test("a code whose screening is not running reads as not found", async ({
   await mockApi(page); // menu exists but has not started
 
   // joining by code: the form reports not found, nothing leaks
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Join a screening");
   await page.fill(".code-input", "ABC12");
   await expect(page.locator(".error")).toHaveText(
@@ -544,7 +544,7 @@ test("a code whose screening is not running reads as not found", async ({
   await expect(page.getByText("Garlic bread")).toHaveCount(0);
 
   // opening the link directly: straight back to the main menu
-  await page.goto("/tasting-shrek/?code=ABC12");
+  await page.goto("/the-movie-menu/?code=ABC12");
   await page.waitForSelector(".home-title");
   await expect(page).not.toHaveURL(/code=/);
 });
@@ -555,7 +555,7 @@ test("a bad code in the URL falls back to the home screen", async ({
   await page.route("http://localhost:3001/**", (route) =>
     route.fulfill({ status: 404, json: {} }),
   );
-  await page.goto("/tasting-shrek/?code=WRONG");
+  await page.goto("/the-movie-menu/?code=WRONG");
   await page.waitForSelector(".home-title");
   await expect(page).not.toHaveURL(/code=/);
 });
@@ -584,7 +584,7 @@ test("a dish photo is downscaled to a local data URL and survives a refresh", as
   await page.route("http://localhost:3001/**", (route) =>
     route.fulfill({ status: 500, json: {} }),
   );
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.click("text=Create a menu");
   await page.waitForSelector(".edit-view");
   await page.keyboard.press("Enter"); // leave the name field
@@ -708,7 +708,7 @@ test("hidden dish names also hide upcoming photos", async ({ page }) => {
 });
 
 test("upload a menu file loads it locally without a code", async ({ page }) => {
-  await page.goto("/tasting-shrek/");
+  await page.goto("/the-movie-menu/");
   await page.locator('input[type="file"]').setInputFiles({
     name: "movie-night.movie.json",
     mimeType: "application/json",
