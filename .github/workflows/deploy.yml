@@ -27,7 +27,7 @@ jobs:
           aws-region: "ap-southeast-2"
 
       - name: Setup mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v4
         with:
           install_args: node rust terraform
 
@@ -40,7 +40,7 @@ jobs:
         run: mise run server:test
 
       - name: Cache npm downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('client/package-lock.json') }}
@@ -50,7 +50,7 @@ jobs:
         run: mise run client:install
 
       - name: Cache Playwright browser
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('client/package-lock.json') }}
@@ -62,7 +62,7 @@ jobs:
         run: mise run client:test:ci
 
       - name: Cache terraform providers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .terraform-plugin-cache
           key: terraform-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl') }}
