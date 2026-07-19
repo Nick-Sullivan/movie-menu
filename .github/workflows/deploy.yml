@@ -13,6 +13,8 @@ jobs:
     name: "Test and deploy"
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -37,14 +39,36 @@ jobs:
       - name: Run server tests
         run: mise run server:test
 
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('client/package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
       - name: Install client dependencies
         run: mise run client:install
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('client/package-lock.json') }}
 
       - name: Install Playwright browser
         run: mise run client:install:browser
 
       - name: Run client tests
         run: mise run client:test:ci
+
+      - name: Cache terraform providers
+        uses: actions/cache@v4
+        with:
+          path: .terraform-plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl') }}
+
+      - name: Create terraform plugin cache directory
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
       - name: Initialise terraform state (infra)
         working-directory: terraform/infrastructure
@@ -60,9 +84,6 @@ jobs:
 
       - name: Build client
         run: VITE_API_URL=$(terraform -chdir=terraform/upload output -raw worker_url) mise run client:build
-
-      - name: Build server image
-        run: mise run server:build:image
 
       - name: Apply terraform state (upload)
         working-directory: terraform/upload
